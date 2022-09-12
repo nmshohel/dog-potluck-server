@@ -5,10 +5,9 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const app = express();
 const port = process.env.PORT || 5000;
-app.use(express.json());
-app.use(cors({origin: true}));
-//this is test
 
+app.use(cors());
+app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.dteuxtf.mongodb.net/?retryWrites=true&w=majority`;
 // console.log(uri);
@@ -73,17 +72,24 @@ async function run() {
             const page = parseInt(req.query.page);
             const size = parseInt(req.query.size);
             const category = req.query.category;
+            const view = req.query.view;
             console.log('query', req.query);
             let query = '';
             if (category == 'shop') {
                 query = {};
+            }
+            else if (view == 'detail') {
+                query = { category };
             }
             else {
                 query = { category };
             }
             const cursor = productCollection.find(query);
             let products;
-            if (page || size) {
+            if (view) {
+                products = await cursor.limit(4).toArray();
+            }
+            else if (page || size) {
                 products = await cursor.skip(page * size).limit(size).toArray();
             }
             else {
@@ -167,9 +173,20 @@ async function run() {
         });
         // get Blog 
         app.get('/blogs', async (req, res) => {
+
+
+            const limit = parseInt(req.query.limit);
             const query = {};
             const cursor = blogCollection.find(query);
-            const products = await cursor.toArray();
+
+
+            let products = '';
+            if (limit == 2) {
+                products = await cursor.limit(limit).toArray();
+            }
+            else {
+                products = await cursor.toArray();
+            }
             res.send(products);
         });
         // get Single blog 
@@ -178,6 +195,20 @@ async function run() {
             const query = { _id: ObjectId(id) };
             const product = await blogCollection.findOne(query);
             res.send(product);
+        });
+        // get Messages  
+        app.get('/message', async (req, res) => {
+            const query = {};
+            const cursor = questCollection.find(query);
+            const products = await cursor.toArray();
+            res.send(products);
+        });
+        // Delete Message 
+        app.delete('/quest/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await questCollection.deleteOne(query);
+            res.send(result);
         })
     }
     finally {
